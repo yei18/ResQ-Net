@@ -19,8 +19,8 @@ No requiere instalación.
 
 ```bash
 # Opción 1: abrir directamente el archivo
-open index.html   # macOS
-start index.html  # Windows
+open ResQNet_MVP.html   # macOS
+start ResQNet_MVP.html  # Windows
 
 # Opción 2: servidor local
 python -m http.server 8080
@@ -100,9 +100,9 @@ score = (severidad × 40) + (personas × 0.4) + (antigüedad × 0.5) + (bono_no_
 
 ```
 resq-net/
-├── index.html          ← MVP completo (una sola página)
-├── main.tex            ← Documento técnico en LaTeX
-├── main.pdf            ← PDF compilado del documento
+├── ResQNet_MVP.html          ← MVP completo (una sola página)
+├── documento tecnico.tex            ← Documento técnico en LaTeX
+├── documento tecnico.pdf            ← PDF compilado del documento
 └── README.md           ← Este archivo
 ```
 
