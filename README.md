@@ -112,11 +112,11 @@ resq-net/
 
 | Integrante | Rol |
 |-----------|-----|
-| Estudiante 1 | Arquitectura y backend |
-| Estudiante 2 | Frontend / MVP |
-| Estudiante 3 | Algoritmos de triaje |
-| Estudiante 4 | Documentación y ética |
-| Estudiante 5 | Integración y pruebas |
+| Jose Daniel castro Villadiego | Arquitectura y backend |
+| Santiago Andres García Acevedo | Frontend / MVP |
+| Santiago de Jesús Trejos Zuluaga | Algoritmos de triaje |
+| Yeiner Jesús Hernández bustos | Documentación y ética |
+| Yordi Romario Jiménez López | Integración y pruebas |
 
 **Docente:** Miguel Alberto Caro Álvarez  
 **Asignatura:** Introducción a la Ingeniería · 2026-I  
