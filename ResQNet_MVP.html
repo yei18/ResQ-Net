@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResQ-Net · Sistema de Gestión Humanitaria</title>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+/* ─── Reset & base ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --primary:   #1A3557;
+  --primary-l: #2A4F7F;
+  --accent:    #E84545;
+  --accent-l:  #FF6B6B;
+  --green:     #27AE60;
+  --amber:     #F39C12;
+  --red:       #C0392B;
+  --bg:        #0D1B2A;
+  --surface:   #162840;
+  --surface2:  #1E3A5F;
+  --text:      #E8F0FE;
+  --text-dim:  #8FAFC8;
+  --border:    #2A4A6B;
+  --shadow:    0 4px 20px rgba(0,0,0,.45);
+  --radius:    8px;
+  --font:      'Segoe UI', system-ui, sans-serif;
+}
+
+html, body { height: 100%; font-family: var(--font); background: var(--bg); color: var(--text); overflow: hidden; }
+
+/* ─── Layout ───────────────────────────────────────────────────────── */
+#app { display: grid; grid-template-rows: 54px 1fr; grid-template-columns: 320px 1fr 300px; height: 100vh; gap: 0; }
+
+/* ─── Header ──────────────────────────────────────────────────────── */
+#header {
+  grid-column: 1 / -1;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 18px;
+  box-shadow: var(--shadow);
+  z-index: 1000;
+}
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-icon { font-size: 22px; }
+.logo-text { font-size: 18px; font-weight: 700; color: var(--text); letter-spacing: .5px; }
+.logo-sub { font-size: 11px; color: var(--text-dim); margin-top: -2px; }
+.header-stats { display: flex; gap: 20px; }
+.hstat { text-align: center; }
+.hstat-val { font-size: 20px; font-weight: 700; line-height: 1; }
+.hstat-lbl { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .5px; }
+.hstat.danger .hstat-val { color: var(--accent); }
+.hstat.warn   .hstat-val { color: var(--amber); }
+.hstat.ok     .hstat-val { color: var(--green); }
+.header-time { font-size: 13px; color: var(--text-dim); text-align: right; }
+#clock { font-size: 20px; font-weight: 700; color: var(--text); }
+
+/* ─── Left panel ──────────────────────────────────────────────────── */
+#left-panel {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.panel-head {
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .8px; color: var(--text-dim);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.badge {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 10px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.incident-list { flex: 1; overflow-y: auto; padding: 8px; }
+.incident-list::-webkit-scrollbar { width: 4px; }
+.incident-list::-webkit-scrollbar-track { background: transparent; }
+.incident-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.inc-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color .2s, transform .1s;
+  position: relative;
+}
+.inc-card:hover { border-color: var(--primary-l); transform: translateX(2px); }
+.inc-card.selected { border-color: var(--accent); }
+.inc-card.critical .inc-sev-bar { background: var(--accent); }
+.inc-card.high     .inc-sev-bar { background: var(--amber); }
+.inc-card.medium   .inc-sev-bar { background: #3498DB; }
+.inc-card.low      .inc-sev-bar { background: var(--green); }
+
+.inc-sev-bar {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 4px; border-radius: var(--radius) 0 0 var(--radius);
+}
+.inc-head { display: flex; justify-content: space-between; align-items: flex-start; margin-left: 8px; }
+.inc-title { font-size: 13px; font-weight: 600; }
+.inc-sev-badge {
+  font-size: 10px; font-weight: 700; border-radius: 4px;
+  padding: 2px 6px; text-transform: uppercase;
+}
+.sev-critical { background: rgba(232,69,69,.25); color: var(--accent-l); }
+.sev-high     { background: rgba(243,156,18,.2);  color: #F7DC6F; }
+.sev-medium   { background: rgba(52,152,219,.2);  color: #85C1E9; }
+.sev-low      { background: rgba(39,174,96,.2);   color: #82E0AA; }
+
+.inc-meta { font-size: 11px; color: var(--text-dim); margin: 5px 0 0 8px; display: flex; gap: 10px; flex-wrap: wrap; }
+.inc-meta span { display: flex; align-items: center; gap: 3px; }
+.inc-score { font-size: 11px; color: var(--text-dim); margin: 6px 0 0 8px; display: flex; align-items: center; gap: 5px; }
+.score-bar-bg { flex: 1; height: 4px; background: var(--border); border-radius: 2px; }
+.score-bar-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--green), var(--amber), var(--accent)); transition: width .4s; }
+.inc-assign { margin: 6px 0 0 8px; }
+.inc-assign-btn {
+  font-size: 11px; padding: 3px 10px; border-radius: 4px;
+  border: 1px solid var(--border); background: var(--primary);
+  color: var(--text); cursor: pointer; transition: background .2s;
+}
+.inc-assign-btn:hover { background: var(--primary-l); }
+.inc-assign-btn.assigned { background: var(--green); border-color: var(--green); cursor: default; }
+
+/* ─── Map ─────────────────────────────────────────────────────────── */
+#map-wrap { position: relative; overflow: hidden; }
+#map { width: 100%; height: 100%; }
+.map-overlay {
+  position: absolute; z-index: 900;
+  background: rgba(13,27,42,.85);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-size: 12px;
+  backdrop-filter: blur(4px);
+}
+#map-controls { top: 10px; left: 10px; display: flex; gap: 8px; }
+.map-btn {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); border-radius: var(--radius);
+  padding: 6px 12px; font-size: 12px; cursor: pointer;
+  transition: background .2s;
+}
+.map-btn:hover, .map-btn.active { background: var(--primary-l); border-color: var(--primary-l); }
+#map-legend { bottom: 10px; left: 10px; }
+.legend-item { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+#sim-controls { bottom: 10px; right: 10px; }
+.sim-btn {
+  display: block; width: 100%; text-align: center; padding: 7px 16px;
+  border-radius: 5px; border: none; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: background .2s; margin-bottom: 5px;
+}
+.sim-btn.start  { background: var(--green); color: #fff; }
+.sim-btn.pause  { background: var(--amber); color: var(--bg); }
+.sim-btn.add    { background: var(--primary-l); color: #fff; }
+.sim-btn.triage { background: var(--accent); color: #fff; }
+
+/* ─── Right panel ─────────────────────────────────────────────────── */
+#right-panel {
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.right-tabs { display: flex; border-bottom: 1px solid var(--border); }
+.rtab {
+  flex: 1; padding: 10px 4px; text-align: center; font-size: 11px;
+  font-weight: 600; text-transform: uppercase; letter-spacing: .5px;
+  cursor: pointer; color: var(--text-dim); border-bottom: 2px solid transparent;
+  transition: all .2s;
+}
+.rtab.active { color: var(--text); border-bottom-color: var(--accent); }
+.rtab-content { flex: 1; overflow-y: auto; padding: 10px; display: none; }
+.rtab-content.active { display: block; }
+.rtab-content::-webkit-scrollbar { width: 4px; }
+.rtab-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* Resources */
+.res-section { margin-bottom: 14px; }
+.res-title { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
+.res-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.res-icon { font-size: 16px; width: 24px; text-align: center; }
+.res-info { flex: 1; }
+.res-name { font-size: 12px; font-weight: 600; }
+.res-count { font-size: 11px; color: var(--text-dim); }
+.res-bar-bg { width: 70px; height: 5px; background: var(--border); border-radius: 3px; }
+.res-bar-fill { height: 100%; border-radius: 3px; transition: width .4s; }
+.res-full  { background: var(--green); }
+.res-mid   { background: var(--amber); }
+.res-low   { background: var(--accent); }
+
+/* Teams */
+.team-card {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 10px 12px; margin-bottom: 8px;
+}
+.team-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.team-icon { font-size: 18px; }
+.team-name { font-size: 13px; font-weight: 600; flex: 1; }
+.team-status { font-size: 10px; font-weight: 700; border-radius: 4px; padding: 2px 6px; }
+.status-available { background: rgba(39,174,96,.2); color: #82E0AA; }
+.status-deployed  { background: rgba(243,156,18,.2); color: #F7DC6F; }
+.status-en-route  { background: rgba(52,152,219,.2); color: #85C1E9; }
+.team-detail { font-size: 11px; color: var(--text-dim); display: flex; gap: 12px; }
+
+/* Log */
+.log-entry { font-size: 11px; border-bottom: 1px solid var(--border); padding: 6px 2px; display: flex; gap: 8px; }
+.log-time { color: var(--text-dim); flex-shrink: 0; white-space: nowrap; }
+.log-msg  { flex: 1; }
+.log-critical { color: var(--accent-l); }
+.log-info     { color: var(--text-dim); }
+.log-success  { color: #82E0AA; }
+.log-warn     { color: #F7DC6F; }
+
+/* Triaje modal */
+#triage-modal {
+  display: none; position: fixed; inset: 0; z-index: 2000;
+  background: rgba(0,0,0,.7); backdrop-filter: blur(6px);
+  align-items: center; justify-content: center;
+}
+#triage-modal.show { display: flex; }
+.modal-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: 540px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 24px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.6);
+}
+.modal-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.modal-sub { font-size: 13px; color: var(--text-dim); margin-bottom: 20px; }
+.triage-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  transition: border-color .2s;
+}
+.triage-rank { font-size: 22px; font-weight: 900; color: var(--text-dim); width: 28px; text-align: center; }
+.triage-info { flex: 1; }
+.triage-name { font-size: 14px; font-weight: 600; }
+.triage-detail { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.triage-score-box { text-align: right; }
+.triage-score-num { font-size: 22px; font-weight: 700; }
+.triage-score-lbl { font-size: 10px; color: var(--text-dim); }
+.triage-criteria { margin: 16px 0; }
+.tc-title { font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
+.tc-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+.tc-row span:last-child { font-weight: 600; }
+.modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+.btn-primary {
+  flex: 1; padding: 10px; border-radius: var(--radius);
+  border: none; background: var(--accent); color: #fff;
+  font-size: 14px; font-weight: 700; cursor: pointer; transition: background .2s;
+}
+.btn-primary:hover { background: var(--accent-l); }
+.btn-secondary {
+  padding: 10px 20px; border-radius: var(--radius);
+  border: 1px solid var(--border); background: transparent;
+  color: var(--text); font-size: 14px; cursor: pointer;
+}
+.btn-secondary:hover { background: var(--surface2); }
+.disclaimer {
+  font-size: 11px; color: var(--amber); margin-top: 14px;
+  padding: 8px; background: rgba(243,156,18,.1); border-radius: 5px;
+  border-left: 3px solid var(--amber);
+}
+
+/* Notification toast */
+#toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px);
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 18px; font-size: 13px;
+  box-shadow: var(--shadow); z-index: 3000; transition: transform .3s;
+}
+#toast.show { transform: translateX(-50%) translateY(0); }
+
+/* Pulse animation for critical markers */
+@keyframes pulse-ring {
+  0%   { transform: scale(1); opacity: 1; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+.pulse-dot::after {
+  content: ''; display: block; position: absolute;
+  inset: 0; border-radius: 50%;
+  border: 2px solid var(--accent);
+  animation: pulse-ring 1.4s infinite;
+}
+
+/* Scrollbar for modal */
+.modal-box::-webkit-scrollbar { width: 4px; }
+.modal-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ═══ HEADER ═══════════════════════════════════════════════════════════ -->
+  <header id="header">
+    <div class="logo">
+      <span class="logo-icon">🛰️</span>
+      <div>
+        <div class="logo-text">ResQ-Net</div>
+        <div class="logo-sub">Sistema de Gestión Humanitaria · Modo Offline</div>
+      </div>
+    </div>
+
+    <div class="header-stats">
+      <div class="hstat danger">
+        <div class="hstat-val" id="stat-critical">0</div>
+        <div class="hstat-lbl">Críticos</div>
+      </div>
+      <div class="hstat warn">
+        <div class="hstat-val" id="stat-incidents">0</div>
+        <div class="hstat-lbl">Incidentes</div>
+      </div>
+      <div class="hstat ok">
+        <div class="hstat-val" id="stat-teams">5</div>
+        <div class="hstat-lbl">Brigadas</div>
+      </div>
+      <div class="hstat ok">
+        <div class="hstat-val" id="stat-assigned">0</div>
+        <div class="hstat-lbl">Asignados</div>
+      </div>
+    </div>
+
+    <div class="header-time">
+      <div id="clock">--:--:--</div>
+      <div style="font-size:11px;color:var(--text-dim)">Cartagena, Colombia · EN VIVO</div>
+    </div>
+  </header>
+
+  <!-- ═══ LEFT PANEL ════════════════════════════════════════════════════════ -->
+  <div id="left-panel">
+    <div class="panel-head">
+      Incidentes Activos
+      <span class="badge" id="inc-count">0</span>
+    </div>
+    <div class="incident-list" id="incident-list"></div>
+  </div>
+
+  <!-- ═══ MAP ══════════════════════════════════════════════════════════════ -->
+  <div id="map-wrap">
+    <div id="map"></div>
+
+    <div class="map-overlay" id="map-controls">
+      <button class="map-btn active" onclick="setView('all')">🗺️ Todo</button>
+      <button class="map-btn" onclick="setView('critical')">🔴 Críticos</button>
+      <button class="map-btn" onclick="setView('teams')">🚁 Brigadas</button>
+    </div>
+
+    <div class="map-overlay" id="map-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#E84545"></div> Incidente crítico</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#F39C12"></div> Incidente alto</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#3498DB"></div> Incidente medio</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#27AE60"></div> Brigada disponible</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#F7DC6F"></div> Brigada desplegada</div>
+    </div>
+
+    <div class="map-overlay" id="sim-controls">
+      <button class="sim-btn start"  id="btn-sim"    onclick="toggleSim()">▶ Iniciar Simulación</button>
+      <button class="sim-btn add"                    onclick="addRandomIncident()">➕ Nuevo Incidente</button>
+      <button class="sim-btn triage"                 onclick="showTriage()">⚖️ Ejecutar Triaje</button>
+    </div>
+  </div>
+
+  <!-- ═══ RIGHT PANEL ═══════════════════════════════════════════════════════ -->
+  <div id="right-panel">
+    <div class="right-tabs">
+      <div class="rtab active" onclick="switchTab('resources')">Recursos</div>
+      <div class="rtab"        onclick="switchTab('teams')">Brigadas</div>
+      <div class="rtab"        onclick="switchTab('log')">Bitácora</div>
+    </div>
+
+    <!-- Resources tab -->
+    <div class="rtab-content active" id="tab-resources">
+      <div class="res-section">
+        <div class="res-title">📦 Suministros médicos</div>
+        <div id="res-list-medical"></div>
+      </div>
+      <div class="res-section">
+        <div class="res-title">🚁 Transporte</div>
+        <div id="res-list-transport"></div>
+      </div>
+      <div class="res-section">
+        <div class="res-title">🔋 Equipamiento</div>
+        <div id="res-list-equipment"></div>
+      </div>
+    </div>
+
+    <!-- Teams tab -->
+    <div class="rtab-content" id="tab-teams">
+      <div id="teams-list"></div>
+    </div>
+
+    <!-- Log tab -->
+    <div class="rtab-content" id="tab-log">
+      <div id="log-list"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ TRIAGE MODAL ════════════════════════════════════════════════════════ -->
+<div id="triage-modal">
+  <div class="modal-box">
+    <div class="modal-title">⚖️ Motor de Triaje Algorítmico</div>
+    <div class="modal-sub">Priorización automática basada en gravedad, distancia y disponibilidad de recursos. La decisión final es siempre humana.</div>
+    <div id="triage-results"></div>
+    <div class="disclaimer">
+      ⚠️ <strong>Aviso ético:</strong> Este sistema produce recomendaciones, no órdenes. Toda asignación debe ser confirmada por un coordinador humano calificado.
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="applyTriage()">✅ Aplicar Asignaciones</button>
+      <button class="btn-secondary" onclick="closeTriage()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TOAST ════════════════════════════════════════════════════════════════ -->
+<div id="toast"></div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════════════════════════════════════════
+
+const CARTAGENA = [10.3910, -75.4794];
+
+const INCIDENT_TYPES = [
+  { name:'Colapso estructural',  icon:'🏚️', base:80 },
+  { name:'Inundación zona baja', icon:'🌊', base:60 },
+  { name:'Incendio',             icon:'🔥', base:75 },
+  { name:'Heridos múltiples',    icon:'🏥', base:90 },
+  { name:'Personas atrapadas',   icon:'🆘', base:85 },
+  { name:'Falta de agua potable',icon:'💧', base:40 },
+  { name:'Corte de suministro',  icon:'⚡', base:30 },
+  { name:'Zona de evacuación',   icon:'🚨', base:65 },
+];
+
+const SEV_LEVELS = ['critical','high','medium','low'];
+const SEV_LABELS = { critical:'Crítico', high:'Alto', medium:'Medio', low:'Bajo' };
+const SEV_COLORS = { critical:'#E84545', high:'#F39C12', medium:'#3498DB', low:'#27AE60' };
+const SEV_WEIGHTS = { critical:1.0, high:0.7, medium:0.45, low:0.2 };
+
+// Resources state
+let resources = {
+  medical: [
+    { icon:'💊', name:'Kits médicos tipo A', total:20, current:20 },
+    { icon:'🩸', name:'Bolsas de sangre',    total:15, current:15 },
+    { icon:'💉', name:'Suero intravenoso',   total:30, current:30 },
+    { icon:'🪢', name:'Kits de torniquete',  total:25, current:25 },
+  ],
+  transport: [
+    { icon:'🚁', name:'Helicópteros',  total:3, current:3 },
+    { icon:'🚤', name:'Lanchas',       total:6, current:6 },
+    { icon:'🚑', name:'Ambulancias',   total:8, current:8 },
+  ],
+  equipment: [
+    { icon:'📡', name:'Radios Mesh',    total:12, current:12 },
+    { icon:'🔦', name:'Generadores',    total:5,  current:5  },
+    { icon:'🏕️', name:'Carpas',         total:40, current:40 },
+  ],
+};
+
+// Teams state
+let teams = [
+  { id:'T1', name:'Brigada Alfa', icon:'🚁', status:'available', members:6, lat:10.405, lng:-75.495, mission:'' },
+  { id:'T2', name:'Brigada Beta', icon:'🚤', status:'available', members:4, lat:10.375, lng:-75.465, mission:'' },
+  { id:'T3', name:'Brigada Gamma',icon:'🚑', status:'available', members:5, lat:10.395, lng:-75.490, mission:'' },
+  { id:'T4', name:'Brigada Delta', icon:'🏥', status:'available', members:8, lat:10.380, lng:-75.510, mission:'' },
+  { id:'T5', name:'Brigada Omega', icon:'⛑️',  status:'available', members:4, lat:10.410, lng:-75.470, mission:'' },
+];
+
+let incidents = [];
+let incidentId = 1;
+let simRunning = false;
+let simTimer = null;
+let logEntries = [];
+let selectedIncident = null;
+let map = null;
+let markers = {};
+let teamMarkers = {};
+let pendingTriageAssignments = [];
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  MAP INIT
+// ═══════════════════════════════════════════════════════════════════════════
+
+function initMap() {
+  map = L.map('map', { center: CARTAGENA, zoom: 13, zoomControl: true });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 18,
+  }).addTo(map);
+
+  map.on('click', (e) => {
+    if (!simRunning) return;
+    addIncidentAt(e.latlng.lat, e.latlng.lng);
+  });
+
+  renderTeamMarkers();
+}
+
+function makeCircleIcon(color, size=16, pulse=false) {
+  const p = pulse ? `<div style="position:absolute;inset:0;border-radius:50%;border:2px solid ${color};animation:pulse-ring 1.4s infinite;"></div>` : '';
+  return L.divIcon({
+    className: '',
+    html: `<div style="position:relative;width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,.6);box-shadow:0 0 8px ${color}66">${p}</div>`,
+    iconSize: [size, size],
+    iconAnchor: [size/2, size/2],
+  });
+}
+
+function makeTeamIcon(team) {
+  const color = team.status === 'available' ? '#27AE60' : team.status === 'deployed' ? '#F39C12' : '#3498DB';
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:34px;height:34px;border-radius:50%;background:${color}22;border:2px solid ${color};display:flex;align-items:center;justify-content:center;font-size:16px">${team.icon}</div>`,
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+  });
+}
+
+function renderTeamMarkers() {
+  teams.forEach(t => {
+    if (teamMarkers[t.id]) { teamMarkers[t.id].remove(); }
+    const m = L.marker([t.lat, t.lng], { icon: makeTeamIcon(t) })
+      .addTo(map)
+      .bindPopup(`<b>${t.icon} ${t.name}</b><br>Estado: ${t.status}<br>Integrantes: ${t.members}${t.mission ? '<br>Misión: '+t.mission : ''}`);
+    teamMarkers[t.id] = m;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  INCIDENTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function addRandomIncident() {
+  const lat = CARTAGENA[0] + (Math.random() - .5) * .06;
+  const lng = CARTAGENA[1] + (Math.random() - .5) * .08;
+  addIncidentAt(lat, lng);
+}
+
+function addIncidentAt(lat, lng) {
+  const type = INCIDENT_TYPES[Math.floor(Math.random() * INCIDENT_TYPES.length)];
+  const sev  = SEV_LEVELS[Math.floor(Math.random() * SEV_LEVELS.length)];
+  const affected = Math.floor(Math.random() * 80) + 5;
+
+  const inc = {
+    id: incidentId++,
+    type: type.name,
+    icon: type.icon,
+    severity: sev,
+    lat, lng,
+    affected,
+    assigned: false,
+    assignedTeam: null,
+    timestamp: new Date(),
+    triageScore: 0,
+  };
+
+  incidents.push(inc);
+  addMarker(inc);
+  renderIncidentList();
+  renderStats();
+  log(`${type.icon} Incidente #${inc.id} reportado: ${type.name} (${SEV_LABELS[sev]}, ${affected} personas)`,
+      sev === 'critical' ? 'critical' : sev === 'high' ? 'warn' : 'info');
+  showToast(`${type.icon} Nuevo incidente: ${type.name}`);
+}
+
+function addMarker(inc) {
+  const color = SEV_COLORS[inc.severity];
+  const m = L.marker([inc.lat, inc.lng], { icon: makeCircleIcon(color, 18, inc.severity === 'critical') })
+    .addTo(map)
+    .bindPopup(buildPopup(inc))
+    .on('click', () => selectIncident(inc.id));
+  markers[inc.id] = m;
+}
+
+function buildPopup(inc) {
+  const t = inc.timestamp.toLocaleTimeString('es-CO');
+  return `<b>${inc.icon} ${inc.type}</b><br>
+    Severidad: <b style="color:${SEV_COLORS[inc.severity]}">${SEV_LABELS[inc.severity]}</b><br>
+    Personas: ${inc.affected}<br>
+    Hora: ${t}<br>
+    ${inc.assigned ? `<span style="color:#27AE60">✅ Asignado a ${inc.assignedTeam}</span>` : '⏳ Sin asignar'}`;
+}
+
+function updateMarker(inc) {
+  if (markers[inc.id]) {
+    const color = inc.assigned ? '#27AE60' : SEV_COLORS[inc.severity];
+    markers[inc.id].setIcon(makeCircleIcon(color, 18, !inc.assigned && inc.severity === 'critical'));
+    markers[inc.id].setPopupContent(buildPopup(inc));
+  }
+}
+
+function selectIncident(id) {
+  selectedIncident = id;
+  renderIncidentList();
+  const inc = incidents.find(i => i.id === id);
+  if (inc && map) map.panTo([inc.lat, inc.lng]);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  TRIAGE ALGORITHM
+// ═══════════════════════════════════════════════════════════════════════════
+
+function calcTriageScore(inc) {
+  // Criteria: severity weight * 40 + affected people * 0.4 + recency * 15 + unassigned bonus * 5
+  const sevScore  = SEV_WEIGHTS[inc.severity] * 40;
+  const popScore  = Math.min(inc.affected, 100) * 0.4;
+  const ageMin    = (Date.now() - inc.timestamp) / 60000;
+  const ageScore  = Math.max(0, 15 - ageMin * 0.5);
+  const unassBonus = inc.assigned ? 0 : 5;
+  return Math.round(sevScore + popScore + ageScore + unassBonus);
+}
+
+function runTriageAlgorithm() {
+  const available = teams.filter(t => t.status === 'available');
+  const unassigned = incidents.filter(i => !i.assigned)
+    .map(i => ({ ...i, triageScore: calcTriageScore(i) }))
+    .sort((a, b) => b.triageScore - a.triageScore);
+
+  const assignments = [];
+  const usedTeams = new Set();
+
+  for (const inc of unassigned) {
+    if (usedTeams.size >= available.length) break;
+    // Assign nearest available team
+    let bestTeam = null, bestDist = Infinity;
+    for (const t of available) {
+      if (usedTeams.has(t.id)) continue;
+      const dist = Math.hypot(t.lat - inc.lat, t.lng - inc.lng);
+      if (dist < bestDist) { bestDist = dist; bestTeam = t; }
+    }
+    if (bestTeam) {
+      assignments.push({ incident: inc, team: bestTeam, score: inc.triageScore });
+      usedTeams.add(bestTeam.id);
+    }
+  }
+  return { assignments, unassigned, available };
+}
+
+function showTriage() {
+  if (incidents.filter(i => !i.assigned).length === 0) {
+    showToast('No hay incidentes sin asignar.'); return;
+  }
+  const { assignments, unassigned, available } = runTriageAlgorithm();
+  pendingTriageAssignments = assignments;
+
+  const container = document.getElementById('triage-results');
+
+  if (assignments.length === 0) {
+    container.innerHTML = '<p style="color:var(--amber);margin:12px 0">No hay brigadas disponibles para asignar en este momento.</p>';
+    document.getElementById('triage-modal').classList.add('show');
+    return;
+  }
+
+  const maxScore = Math.max(...unassigned.map(i => i.triageScore), 1);
+
+  let html = `<div style="font-size:12px;color:var(--text-dim);margin-bottom:12px">
+    ${unassigned.length} incidentes en cola · ${available.length} brigadas disponibles · ${assignments.length} asignaciones propuestas
+  </div>`;
+
+  assignments.forEach((a, idx) => {
+    const pct = Math.round((a.score / maxScore) * 100);
+    html += `
+    <div class="triage-row">
+      <div class="triage-rank">#${idx+1}</div>
+      <div class="triage-info">
+        <div class="triage-name">${a.incident.icon} ${a.incident.type}</div>
+        <div class="triage-detail">
+          ${SEV_LABELS[a.incident.severity]} · ${a.incident.affected} personas ·
+          → ${a.team.icon} ${a.team.name}
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+          <div style="flex:1;height:4px;background:var(--border);border-radius:2px">
+            <div style="width:${pct}%;height:100%;background:${SEV_COLORS[a.incident.severity]};border-radius:2px"></div>
+          </div>
+        </div>
+      </div>
+      <div class="triage-score-box">
+        <div class="triage-score-num" style="color:${SEV_COLORS[a.incident.severity]}">${a.score}</div>
+        <div class="triage-score-lbl">pts</div>
+      </div>
+    </div>`;
+  });
+
+  html += `<div class="triage-criteria">
+    <div class="tc-title">Criterios del algoritmo</div>
+    <div class="tc-row"><span>Peso por severidad (× 40)</span><span>40%</span></div>
+    <div class="tc-row"><span>Personas afectadas (× 0.4)</span><span>40%</span></div>
+    <div class="tc-row"><span>Tiempo sin atención (× 0.5/min)</span><span>15%</span></div>
+    <div class="tc-row"><span>Bono por no asignado</span><span>5%</span></div>
+  </div>`;
+
+  container.innerHTML = html;
+  document.getElementById('triage-modal').classList.add('show');
+}
+
+function applyTriage() {
+  pendingTriageAssignments.forEach(a => {
+    const inc  = incidents.find(i => i.id === a.incident.id);
+    const team = teams.find(t => t.id === a.team.id);
+    if (!inc || !team) return;
+    inc.assigned     = true;
+    inc.assignedTeam = team.name;
+    team.status      = 'deployed';
+    team.mission     = inc.type;
+    updateMarker(inc);
+    log(`✅ ${team.icon} ${team.name} desplegada → ${inc.icon} ${inc.type} (#${inc.id})`, 'success');
+  });
+  renderIncidentList();
+  renderStats();
+  renderTeamMarkers();
+  renderRightPanel();
+  closeTriage();
+  showToast(`✅ ${pendingTriageAssignments.length} asignaciones aplicadas.`);
+}
+
+function closeTriage() {
+  document.getElementById('triage-modal').classList.remove('show');
+  pendingTriageAssignments = [];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  MANUAL ASSIGN
+// ═══════════════════════════════════════════════════════════════════════════
+
+function assignBestTeam(incId) {
+  const inc = incidents.find(i => i.id === incId);
+  if (!inc || inc.assigned) return;
+  const available = teams.filter(t => t.status === 'available');
+  if (!available.length) { showToast('No hay brigadas disponibles.'); return; }
+  const team = available.reduce((best, t) => {
+    const d = Math.hypot(t.lat - inc.lat, t.lng - inc.lng);
+    const db = Math.hypot(best.lat - inc.lat, best.lng - inc.lng);
+    return d < db ? t : best;
+  });
+  inc.assigned = true;
+  inc.assignedTeam = team.name;
+  team.status  = 'deployed';
+  team.mission = inc.type;
+  updateMarker(inc);
+  renderIncidentList();
+  renderStats();
+  renderTeamMarkers();
+  renderRightPanel();
+  log(`✅ ${team.icon} ${team.name} asignada manualmente → ${inc.icon} ${inc.type}`, 'success');
+  showToast(`${team.icon} ${team.name} en camino.`);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  RENDER FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function renderIncidentList() {
+  const container = document.getElementById('incident-list');
+  const sorted = [...incidents].sort((a, b) => {
+    const w = { critical:4, high:3, medium:2, low:1 };
+    return w[b.severity] - w[a.severity];
+  });
+
+  if (sorted.length === 0) {
+    container.innerHTML = `<div style="text-align:center;color:var(--text-dim);padding:40px 20px;font-size:13px">
+      Sin incidentes activos.<br>Inicia la simulación o haz clic en el mapa.
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = sorted.map(inc => {
+    const score = calcTriageScore(inc);
+    const isSelected = selectedIncident === inc.id;
+    return `
+    <div class="inc-card ${inc.severity} ${isSelected ? 'selected' : ''}" onclick="selectIncident(${inc.id})">
+      <div class="inc-sev-bar"></div>
+      <div class="inc-head">
+        <div class="inc-title">${inc.icon} ${inc.type}</div>
+        <div class="inc-sev-badge sev-${inc.severity}">${SEV_LABELS[inc.severity]}</div>
+      </div>
+      <div class="inc-meta">
+        <span>👥 ${inc.affected}</span>
+        <span>🕐 ${inc.timestamp.toLocaleTimeString('es-CO')}</span>
+        ${inc.assigned ? `<span style="color:#82E0AA">✅ ${inc.assignedTeam}</span>` : ''}
+      </div>
+      <div class="inc-score">
+        <span style="font-size:10px;color:var(--text-dim)">Triaje:</span>
+        <div class="score-bar-bg"><div class="score-bar-fill" style="width:${Math.min(score,100)}%"></div></div>
+        <span style="font-size:11px;font-weight:700">${score}</span>
+      </div>
+      ${!inc.assigned ? `<div class="inc-assign"><button class="inc-assign-btn" onclick="event.stopPropagation();assignBestTeam(${inc.id})">🚁 Asignar brigada</button></div>` : ''}
+    </div>`;
+  }).join('');
+
+  document.getElementById('inc-count').textContent = incidents.length;
+}
+
+function renderStats() {
+  const critical = incidents.filter(i => i.severity === 'critical' && !i.assigned).length;
+  const assigned = incidents.filter(i => i.assigned).length;
+  document.getElementById('stat-critical').textContent  = critical;
+  document.getElementById('stat-incidents').textContent = incidents.length;
+  document.getElementById('stat-assigned').textContent  = assigned;
+  document.getElementById('stat-teams').textContent     = teams.filter(t => t.status === 'available').length;
+}
+
+function renderRightPanel() {
+  renderResources();
+  renderTeams();
+}
+
+function renderResources() {
+  ['medical','transport','equipment'].forEach(cat => {
+    const el = document.getElementById(`res-list-${cat}`);
+    el.innerHTML = resources[cat].map(r => {
+      const pct = Math.round((r.current / r.total) * 100);
+      const cls = pct > 60 ? 'res-full' : pct > 30 ? 'res-mid' : 'res-low';
+      return `<div class="res-item">
+        <div class="res-icon">${r.icon}</div>
+        <div class="res-info">
+          <div class="res-name">${r.name}</div>
+          <div class="res-count">${r.current} / ${r.total}</div>
+        </div>
+        <div class="res-bar-bg"><div class="res-bar-fill ${cls}" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('');
+  });
+}
+
+function renderTeams() {
+  const el = document.getElementById('teams-list');
+  el.innerHTML = teams.map(t => {
+    const cls = t.status === 'available' ? 'status-available' : t.status === 'deployed' ? 'status-deployed' : 'status-en-route';
+    const lbl = { available:'Disponible', deployed:'Desplegada', 'en-route':'En camino' }[t.status] || t.status;
+    return `<div class="team-card">
+      <div class="team-head">
+        <div class="team-icon">${t.icon}</div>
+        <div class="team-name">${t.name}</div>
+        <div class="team-status ${cls}">${lbl}</div>
+      </div>
+      <div class="team-detail">
+        <span>👥 ${t.members} miembros</span>
+        ${t.mission ? `<span>📍 ${t.mission}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderLog() {
+  const el = document.getElementById('log-list');
+  el.innerHTML = [...logEntries].reverse().slice(0, 60).map(e =>
+    `<div class="log-entry log-${e.type}">
+      <span class="log-time">${e.time}</span>
+      <span class="log-msg">${e.msg}</span>
+    </div>`
+  ).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  UTILITIES
+// ═══════════════════════════════════════════════════════════════════════════
+
+function log(msg, type='info') {
+  const now = new Date().toLocaleTimeString('es-CO');
+  logEntries.push({ time: now, msg, type });
+  if (document.getElementById('tab-log').classList.contains('active')) renderLog();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.rtab').forEach((t, i) => {
+    const tabs = ['resources','teams','log'];
+    t.classList.toggle('active', tabs[i] === name);
+  });
+  document.querySelectorAll('.rtab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+  if (name === 'log') renderLog();
+}
+
+function setView(mode) {
+  document.querySelectorAll('.map-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  if (mode === 'all') {
+    if (incidents.length) {
+      const lats = incidents.map(i => i.lat), lngs = incidents.map(i => i.lng);
+      map.fitBounds([[Math.min(...lats)-.005, Math.min(...lngs)-.005],[Math.max(...lats)+.005, Math.max(...lngs)+.005]]);
+    }
+  } else if (mode === 'critical') {
+    const crits = incidents.filter(i => i.severity === 'critical');
+    if (crits.length) map.panTo([crits[0].lat, crits[0].lng]);
+  } else if (mode === 'teams') {
+    const lats = teams.map(t => t.lat), lngs = teams.map(t => t.lng);
+    map.fitBounds([[Math.min(...lats)-.005, Math.min(...lngs)-.005],[Math.max(...lats)+.005, Math.max(...lngs)+.005]]);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SIMULATION
+// ═══════════════════════════════════════════════════════════════════════════
+
+function toggleSim() {
+  simRunning = !simRunning;
+  const btn = document.getElementById('btn-sim');
+  if (simRunning) {
+    btn.textContent = '⏸ Pausar Simulación';
+    btn.className = 'sim-btn pause';
+    simTimer = setInterval(() => {
+      if (Math.random() < .35) addRandomIncident();
+      // Occasionally mark a team as returning
+      const deployed = teams.filter(t => t.status === 'deployed');
+      if (deployed.length && Math.random() < .2) {
+        const t = deployed[Math.floor(Math.random() * deployed.length)];
+        t.status = 'available';
+        t.mission = '';
+        renderTeamMarkers();
+        renderRightPanel();
+        renderStats();
+        log(`🔄 ${t.icon} ${t.name} ha regresado a base.`, 'info');
+      }
+    }, 4000);
+    log('▶ Simulación iniciada. Nuevos incidentes se generan automáticamente.', 'info');
+    showToast('▶ Simulación iniciada');
+  } else {
+    btn.textContent = '▶ Iniciar Simulación';
+    btn.className = 'sim-btn start';
+    clearInterval(simTimer);
+    log('⏸ Simulación pausada.', 'info');
+    showToast('⏸ Simulación pausada');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CLOCK
+// ═══════════════════════════════════════════════════════════════════════════
+
+function updateClock() {
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('es-CO', { hour12: false });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════════════════
+
+document.addEventListener('DOMContentLoaded', () => {
+  initMap();
+  renderResources();
+  renderTeams();
+  renderIncidentList();
+  renderStats();
+  updateClock();
+  setInterval(updateClock, 1000);
+  setInterval(() => {
+    if (incidents.length) {
+      renderIncidentList(); // keep triage scores fresh
+    }
+  }, 10000);
+
+  // Seed 3 initial incidents for demo
+  setTimeout(() => {
+    addRandomIncident();
+    setTimeout(addRandomIncident, 800);
+    setTimeout(addRandomIncident, 1500);
+    log('🛰️ ResQ-Net iniciado. Sistema operativo en modo offline.', 'success');
+  }, 600);
+});
+</script>
+</body>
+</html>
