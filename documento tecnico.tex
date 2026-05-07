@@ -1,0 +1,712 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage{hyphenat}
+% ─── Paquetes ────────────────────────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{lmodern}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tocloft}
+\usepackage{parskip}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{pgfgantt}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds}
+
+% ─── Geometría ───────────────────────────────────────────────────────────────
+\geometry{
+  top=2.5cm, bottom=2.5cm,
+  left=3cm,  right=2.5cm
+}
+
+% ─── Colores ─────────────────────────────────────────────────────────────────
+\definecolor{primary}{HTML}{1A3557}
+\definecolor{accent}{HTML}{E84545}
+\definecolor{lightgray}{HTML}{F5F5F5}
+\definecolor{codebg}{HTML}{F0F4F8}
+\definecolor{codetext}{HTML}{1A1A2E}
+
+% ─── Hiperlinks ──────────────────────────────────────────────────────────────
+\hypersetup{
+  colorlinks=true,
+  linkcolor=primary,
+  urlcolor=accent,
+  citecolor=primary,
+  pdftitle={ResQ-Net: Sistema de Gestión Humanitaria Distribuida},
+  pdfauthor={Grupo 10 --- Introducción a la Ingeniería 2026-I}
+}
+
+% ─── Cabecera y pie de página ────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{primary}\textbf{ResQ-Net} --- Ayuda Humanitaria Distribuida}
+\fancyhead[R]{\small\color{primary}Introducción a la Ingeniería · 2026-I}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ─── Títulos de sección ──────────────────────────────────────────────────────
+\titleformat{\section}{\Large\bfseries\color{primary}}{}{0em}{\thesection\quad}[\titlerule]
+\titleformat{\subsection}{\large\bfseries\color{primary!80}}{}{0em}{\thesubsection\quad}
+\titleformat{\subsubsection}{\normalsize\bfseries}{}{0em}{\thesubsubsection\quad}
+
+% ─── Código ──────────────────────────────────────────────────────────────────
+\lstset{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{primary}\bfseries,
+  commentstyle=\color{gray},
+  stringstyle=\color{accent},
+  breaklines=true,
+  frame=single,
+  framerule=0.4pt,
+  rulecolor=\color{primary!30}
+}
+
+% ─── Documento ───────────────────────────────────────────────────────────────
+\begin{document}
+
+% ╔══════════════════════════════════════════════════════════════════════════╗
+% ║                          PORTADA                                         ║
+% ╚══════════════════════════════════════════════════════════════════════════╝
+\begin{titlepage}
+  \centering
+  \vspace*{1cm}
+
+  {\color{primary}\rule{\linewidth}{2pt}}
+  \vspace{0.5cm}
+
+  {\LARGE\bfseries\color{primary}
+    DEPARTAMENTO DE INGENIERÍA DE SISTEMAS\\[0.3cm]
+    Introducción a la Ingeniería · 2026-I}
+
+  \vspace{0.5cm}
+  {\color{accent}\rule{\linewidth}{1pt}}
+  \vspace{1.5cm}
+
+  {\Huge\bfseries\color{primary} ResQ-Net}\\[0.4cm]
+  {\Large Sistema de Gestión de Recursos Humanitarios\\
+  Descentralizado en Tiempo Real}
+
+  \vspace{1cm}
+  {\large\color{gray} Caso 10 --- Ayuda Humanitaria}
+
+  \vspace{2cm}
+  \begin{tabular}{ll}
+    \toprule
+    \textbf{Integrante} & \textbf{Rol principal} \\
+    \midrule
+    Jose Daniel Castro Villadiego & Arquitectura de sistemas y backend \\
+    Santiago Andres García Acevedo & Desarrollo frontend / MVP \\
+    Santiago de Jesús Trejos Zuluaga & Algoritmos de triaje y lógica \\
+    Yeiner Jesús Hernández bustos & Documentación técnica y ética \\
+    Yordi Romario Jiménez López & Integración y pruebas \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{1.5cm}
+  \begin{tabular}{ll}
+    \textbf{Docente:} & Miguel Alberto Caro Álvarez \\
+    \textbf{Repositorio:} & \href{https://github.com/yei18/ResQ-Net.git}{\texttt{https://github.com/yei18/ResQ-Net.git}} \\
+    \textbf{Fecha de entrega:} & 27 de marzo de 2026 \\
+  \end{tabular}
+
+  \vfill
+  {\color{primary}\rule{\linewidth}{2pt}}
+
+  \vspace{0.4cm}
+  {\small\itshape ``La tecnología es inútil si no sirve a la humanidad.''}
+\end{titlepage}
+
+% ─── Tabla de contenidos ─────────────────────────────────────────────────────
+\tableofcontents
+\newpage
+
+% ╔══════════════════════════════════════════════════════════════════════════╗
+% ║  1. DESCRIPCIÓN DEL PROBLEMA                                             ║
+% ╚══════════════════════════════════════════════════════════════════════════╝
+\section{Descripción del Problema}
+
+\subsection{Contexto del caso}
+
+Cuando un desastre natural golpea una zona densamente poblada, los primeros
+sesenta minutos son los más críticos. Los equipos de rescate llegan sin mapas
+actualizados, sin saber cuántas personas necesitan medicamentos urgentes, sin
+forma de evitar que dos brigadas envíen kits al mismo punto mientras otra zona
+queda sin cobertura. La infraestructura de telecomunicaciones colapsa. Las
+bases de datos centrales dejan de responder. El caos operativo mata a personas
+que podrían haberse salvado.
+
+Según datos de la \textbf{OCHA} (Oficina para la Coordinación de Asuntos
+Humanitarios de la ONU), entre 2000 y 2023 los desastres naturales afectaron
+a más de 4.200 millones de personas y causaron pérdidas económicas superiores
+a 3,6 billones de dólares \cite{ocha2023}. En Latinoamérica, Colombia ocupa
+el quinto lugar en número de eventos por año \cite{ungrd2022}, con terremotos
+en el eje cafetero, inundaciones en la Costa Caribe e incendios forestales en
+la Amazonía.
+
+El problema central no es la falta de recursos: es la incapacidad de
+\textbf{coordinarlos en tiempo real cuando la infraestructura falla}.
+
+\subsection{Magnitud del problema}
+
+\begin{itemize}[leftmargin=1.5em]
+  \item En el terremoto de Haiti (2010), la duplicación de entregas de víveres
+        llegó al \textbf{34\,\%} del total de suministros movilizados
+        \cite{schuller2016}.
+  \item En las inundaciones del Chocó (2019), brigadas de rescate tardaron
+        hasta \textbf{6 horas} en sincronizar su posición por falta de
+        comunicación directa \cite{ungrd2022}.
+  \item El \textbf{80\,\%} de las muertes evitables en catástrofes ocurre en
+        las primeras 4 horas, período en el que la coordinación es más difícil
+        \cite{who2022}.
+\end{itemize}
+
+\subsection{Población afectada}
+
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Directa:} brigadas de rescate, coordinadores de operaciones de
+        emergencia, pilotos de drones de entrega.
+  \item \textbf{Indirecta:} toda persona atrapada o afectada en la zona del
+        desastre, comunidades aledañas que requieren evacuación, voluntarios y
+        ONGs que llegan sin visibilidad del terreno.
+\end{itemize}
+
+\subsection{Justificación de la solución}
+
+Un sistema distribuido que funcione \textbf{sin conexión a internet central}
+---usando redes Mesh, computación en el borde (\textit{fog computing}) y
+comunicación por radio cuando sea necesario--- permite que los equipos en
+campo compartan su estado, las necesidades detectadas y la ubicación de
+suministros, aun cuando la infraestructura convencional ha colapsado. Agregar
+un motor de triaje algorítmico que priorice la asignación de recursos escasos
+reduce la dependencia de decisiones ad hoc bajo presión extrema.
+
+% ╔══════════════════════════════════════════════════════════════════════════╗
+% ║  2. CÓMO SE LLEGÓ A LA SOLUCIÓN                                          ║
+% ╚══════════════════════════════════════════════════════════════════════════╝
+\section{Cómo se llegó a la Solución}
+
+\subsection{Proceso de ideación}
+
+El equipo aplicó un proceso de cuatro fases inspirado en \textbf{Design
+Thinking} \cite{plattner2010}:
+
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Empatizar:} revisamos reportes post-desastre de la Cruz Roja,
+        la UNGRD y testimonios de voluntarios colombianos que participaron en
+        las inundaciones de Mocoa (2017).
+  \item \textbf{Definir:} el problema central es la \textit{falta de
+        visibilidad compartida} entre equipos que operan en campo sin
+        conectividad estable.
+  \item \textbf{Idear:} propusimos tres alternativas (véase siguiente sección).
+  \item \textbf{Prototipar y testear:} construimos el MVP mínimo para validar
+        la lógica de sincronización y el algoritmo de triaje.
+\end{enumerate}
+
+\subsection{Alternativas consideradas y descartadas}
+
+\begin{longtable}{>{\bfseries}p{3.5cm} p{5cm} p{5cm}}
+  \toprule
+  Alternativa & Ventaja & Razón de descarte \\
+  \midrule
+  \endfirsthead
+  \toprule
+  Alternativa & Ventaja & Razón de descarte \\
+  \midrule
+  \endhead
+  App centralizada en la nube &
+    Interfaz conocida, fácil de desplegar &
+    Requiere internet: inutilizable cuando la infraestructura colapsa \\[4pt]
+  Radio UHF / VHF analógica &
+    No depende de ninguna red digital &
+    Sin capacidad de compartir datos estructurados; requiere operadores
+    especializados y coordinación manual \\[4pt]
+  \textbf{Red Mesh + fog computing} (elegida) &
+    Funciona sin internet central; los nodos se sincronizan entre sí;
+    escalable de forma orgánica &
+    Mayor complejidad inicial, pero cubre los requisitos críticos del
+    problema \\
+  \bottomrule
+\end{longtable}
+
+\subsection{Criterio de selección}
+
+La solución elegida satisface tres requisitos no negociables identificados
+durante la fase de definición: (1) operar sin infraestructura centralizada,
+(2) compartir estado en tiempo cuasi-real entre nodos dispersos y (3) tomar
+decisiones de asignación de recursos con criterios explícitos y auditables.
+
+% ╔══════════════════════════════════════════════════════════════════════════╗
+% ║  3. ARQUITECTURA DEL MVP                                                 ║
+% ╚══════════════════════════════════════════════════════════════════════════╝
+\section{Arquitectura del MVP}
+
+\subsection{Visión general}
+
+ResQ-Net se compone de tres capas que pueden operar de forma autónoma o
+coordinada:
+
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Capa de campo:} dispositivos móviles (tablets, smartphones) en
+        manos de las brigadas.
+  \item \textbf{Capa de niebla (fog):} nodos locales ---Raspberry Pi o
+        laptops--- que actúan como coordinadores de sector.
+  \item \textbf{Capa de nube (opcional):} sincronización diferida con un
+        servidor central cuando haya conectividad disponible.
+\end{enumerate}
+
+\subsection{Diagrama de arquitectura}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=1.2cm and 1.8cm,
+  every node/.style={font=\small},
+  box/.style={rectangle, rounded corners=4pt, draw=primary, thick,
+              fill=primary!8, minimum width=2.8cm, minimum height=1cm,
+              text centered, text width=2.6cm},
+  cloud/.style={ellipse, draw=accent, thick, fill=accent!10,
+                minimum width=2.8cm, minimum height=1cm, text centered,
+                text width=2.6cm},
+  arrow/.style={-{Stealth[length=6pt]}, thick, color=primary!70},
+  dasharrow/.style={-{Stealth[length=6pt]}, thick, dashed, color=gray}
+]
+
+% Capa nube
+\node[cloud] (cloud) {Servidor central\\(nube,opcional)};
+
+% Capa fog
+\node[box, below=2cm of cloud] (fog1) {Nodo Fog\\Sector A};
+\node[box, right=4cm of fog1]  (fog2) {Nodo Fog\\Sector B};
+\node[box, left=2cm of fog1]   (fog3) {Nodo Fog\\Sector C};
+
+% Capa campo
+\node[box, below=1.6cm of fog3, fill=accent!8, draw=accent]
+      (d1) {Brigada\\Rescate 1};
+\node[box, below=1.6cm of fog1, fill=accent!8, draw=accent]
+      (d2) {Brigada\\Rescate 2};
+\node[box, right=0.6cm of d2,   fill=accent!8, draw=accent]
+      (d3) {Dron\\Entrega};
+\node[box, below=1.6cm of fog2, fill=accent!8, draw=accent]
+      (d4) {Centro de\\Suministros};
+
+% Flechas fog → cloud
+\draw[dasharrow] (fog1.north) -- (cloud.south);
+\draw[dasharrow] (fog2.north) -- (cloud.south);
+\draw[dasharrow] (fog3.north) -- (cloud.south);
+
+% Flechas Mesh fog ↔ fog
+\draw[arrow, Stealth-Stealth] (fog1.east) -- (fog2.west);
+\draw[arrow, Stealth-Stealth] (fog1.west) -- (fog3.east);
+
+% Flechas campo → fog
+\draw[arrow] (d1.north) -- (fog3.south);
+\draw[arrow] (d2.north) -- (fog1.south);
+\draw[arrow] (d3.north) -- (fog1.south);
+\draw[arrow] (d4.north) -- (fog2.south);
+
+% Etiquetas de protocolo
+\node[gray, font=\scriptsize, above=0.15cm of fog1] {Mesh / Wi-Fi Direct};
+\node[gray, font=\scriptsize, right=0.05cm of fog2.north east, rotate=30]
+      {\scriptsize HTTPS};
+
+\end{tikzpicture}
+\caption{Arquitectura de tres capas de ResQ-Net. Las líneas continuas
+  representan comunicación Mesh directa; las discontinuas, sincronización
+  diferida a internet cuando está disponible.}
+\label{fig:arch}
+\end{figure}
+
+\subsection{Flujo de datos}
+
+\begin{enumerate}[leftmargin=1.5em]
+  \item Una brigada registra en su tablet una \textbf{necesidad detectada}
+        (p.\,ej., 12 personas con heridas graves en coordenada X).
+  \item El dato se firma con timestamp y ID de nodo, y se replica por
+        \textbf{Gossip Protocol} a todos los nodos fog del sector.
+  \item Cada nodo fog ejecuta el \textbf{motor de triaje} y recalcula las
+        prioridades de asignación de recursos disponibles.
+  \item La decisión de asignación se devuelve a los dispositivos de campo como
+        una instrucción concreta: ``Envíe kit médico tipo A a coordenada X.''
+  \item Si hay internet, los datos se sincronizan con el servidor central para
+        análisis post-desastre.
+\end{enumerate}
+
+\subsection{Componentes del MVP (simulado en navegador)}
+
+El MVP web replica el comportamiento del sistema usando un mapa interactivo
+(Leaflet.js) con nodos simulados. El motor de triaje corre enteramente en el
+cliente (\textbf{JavaScript puro}), sin dependencia de servidor externo, lo
+que demuestra la viabilidad de ejecutarlo en un nodo fog de bajo costo.
+
+% ╔══════════════════════════════════════════════════════════════════════════╗
+% ║  4. HERRAMIENTAS Y TECNOLOGÍAS                                           ║
+% ╚══════════════════════════════════════════════════════════════════════════╝
+\section{Herramientas y Tecnologías Utilizadas}
+
+\begin{longtable}{>{\bfseries}p{3cm} p{4cm} p{6cm}}
+  \toprule
+  Tecnología & Categoría & Justificación \\
+  \midrule
+  \endfirsthead
+  \toprule
+  Tecnología & Categoría & Justificación \\
+  \midrule
+  \endhead
+  HTML5 / CSS3 & Frontend & Estándar universal; corre en cualquier navegador
+                            sin instalación adicional \\[4pt]
+  JavaScript (ES2022) & Lógica cliente & Permite ejecutar el motor de triaje
+                                          directamente en el navegador;
+                                          sin dependencia de servidor \\[4pt]
+  Leaflet.js 1.9 & Cartografía & Librería open-source de mapas interactivos;
+                                  ligera (42\,KB), sin costo de API \\[4pt]
+  OpenStreetMap & Datos de mapas & Cartografía libre y actualizada; no
+                                    requiere clave de pago \\[4pt]
+  PeerJS / WebRTC & Comunicación P2P & Conexión directa entre navegadores
+                                        para simular red Mesh \\[4pt]
+  Git / GitHub & Control de versiones & Trazabilidad completa del código;
+                                         revisión entre integrantes \\[4pt]
+  Overleaf & Documentación & Edición colaborativa de \LaTeX{} en tiempo real \\[4pt]
+  Python 3.12 & Scripts auxiliares & Generación de datos de prueba y
+                                      scripts de validación \\
+  \bottomrule
+\end{longtable}
+
+\subsection{Justificación de tecnologías clave}
+
+\textbf{JavaScript puro (sin framework):} elegimos no usar React ni Vue para
+el MVP porque el objetivo es demostrar que el motor de triaje puede ejecutarse
+en hardware de baja gama sin un sistema de empaquetado complejo. Un Raspberry
+Pi 4 con Chromium puede correr la aplicación sin modificaciones.
+
+\textbf{Leaflet.js en lugar de Google Maps:} Google Maps requiere una API key
+de pago y conexión a sus servidores. Leaflet con tiles de OpenStreetMap puede
+cargarse desde caché local, lo cual es crítico en escenarios sin internet.
+
+% ╔══════════════════════════════════════════════════════════════════════════╗
+% ║  5. METODOLOGÍA DE DESARROLLO                                            ║
+% ╚══════════════════════════════════════════════════════════════════════════╝
+\section{Metodología de Desarrollo}
+
+Aplicamos \textbf{Scrum adaptado} en sprints de una semana, con la siguiente
+estructura:
+
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Product Backlog:} lista priorizada de funcionalidades, desde
+        el mapa interactivo hasta el motor de triaje.
+  \item \textbf{Sprint Planning:} cada lunes (adaptado a miércoles/jueves
+        según el cronograma del taller) definimos el sprint goal y distribuimos
+        las tareas.
+  \item \textbf{Daily standup (asíncrono):} mensajes diarios en el canal de
+        WhatsApp del grupo con el formato: ¿Qué hice ayer? ¿Qué haré hoy?
+        ¿Hay algún bloqueo?
+  \item \textbf{Sprint Review:} cada avance ante el docente (13 y 20 de marzo)
+        funcionó como revisión formal del sprint.
+  \item \textbf{Retrospectiva:} al final de cada semana identificamos un punto
+        de mejora concreto para el siguiente sprint.
+\end{itemize}
+
+El tablero de tareas se gestionó en \textbf{GitHub Projects} con columnas
+\textit{Backlog}, \textit{In Progress}, \textit{In Review} y \textit{Done}.
+
+% ╔══════════════════════════════════════════════════════════════════════════╗
+% ║  6. PLANIFICACIÓN DE LAS 3 SEMANAS                                       ║
+% ╚══════════════════════════════════════════════════════════════════════════╝
+\section{Planificación de las 3 Semanas de Desarrollo}
+
+\begin{longtable}{>{\bfseries}p{1.6cm} p{5cm} p{3cm} p{2.2cm}}
+  \toprule
+  Semana & Tarea & Responsable & Estado \\
+  \midrule
+  \endfirsthead
+  \toprule
+  Semana & Tarea & Responsable & Estado \\
+  \midrule
+  \endhead
+  1 & Definición de arquitectura y tecnologías & Est.\,1 \& 3 & \textcolor{green!60!black}{Completado} \\
+  1 & Estructura base HTML/CSS/JS & Est.\,2 & \textcolor{green!60!black}{Completado} \\
+  1 & Boceto del algoritmo de triaje (pseudocódigo) & Est.\,3 & \textcolor{green!60!black}{Completado} \\
+  1 & Inicio del documento \LaTeX & Est.\,4 & \textcolor{green!60!black}{Completado} \\
+  1 & Configuración de GitHub y ramas & Est.\,5 & \textcolor{green!60!black}{Completado} \\
+  \midrule
+  2 & Mapa interactivo con nodos simulados & Est.\,2 & \textcolor{green!60!black}{Completado} \\
+  2 & Motor de triaje v1 (puntuación básica) & Est.\,3 & \textcolor{green!60!black}{Completado} \\
+  2 & Integración mapa + motor de triaje & Est.\,1 \& 2 & \textcolor{green!60!black}{Completado} \\
+  2 & Secciones 1--4 del documento & Est.\,4 & \textcolor{green!60!black}{Completado} \\
+  2 & Pruebas funcionales básicas & Est.\,5 & \textcolor{green!60!black}{Completado} \\
+  \midrule
+  3 & Motor de triaje v2 (múltiples recursos) & Est.\,3 & \textcolor{green!60!black}{Completado} \\
+  3 & Panel de control y estadísticas & Est.\,2 & \textcolor{green!60!black}{Completado} \\
+  3 & Secciones 5--10 del documento & Est.\,4 & \textcolor{green!60!black}{Completado} \\
+  3 & Revisión integral y pruebas de estrés & Est.\,1 \& 5 & \textcolor{green!60!black}{Completado} \\
+  3 & Preparación de la exposición & Todos & \textcolor{green!60!black}{Completado} \\
+  \bottomrule
+\end{longtable}
+
+\subsection{Diagrama de Gantt simplificado}
+
+\begin{figure}[H]
+\centering
+\begin{ganttchart}[
+  hgrid,
+  vgrid={*{4}{draw=none}, dotted},
+  title/.style={fill=primary!80, draw=none, text=white},
+  title label font=\small\bfseries,
+  bar/.style={fill=primary!50, draw=primary},
+  bar label font=\small,
+  bar height=0.5,
+  group/.style={fill=primary!20, draw=primary!60},
+  milestone/.style={fill=accent, draw=accent!80},
+  x unit=0.9cm,
+  y unit title=0.6cm,
+  y unit chart=0.55cm
+]{1}{15}
+  \gantttitle{Semana 1}{5}
+  \gantttitle{Semana 2}{5}
+  \gantttitle{Semana 3}{5} \\
+  \gantttitlelist{1,...,15}{1} \\
+
+  \ganttbar{Arquitectura}{1}{2} \\
+  \ganttbar{HTML/CSS base}{1}{3} \\
+  \ganttbar{Algoritmo triaje v1}{2}{5} \\
+  \ganttbar{Documento \LaTeX{} (inicio)}{3}{5} \\
+  \ganttmilestone{Avance 1}{5} \\
+  \ganttbar{Mapa + nodos}{6}{8} \\
+  \ganttbar{Integración}{7}{9} \\
+  \ganttbar{Documento (secs.\,1--4)}{6}{10} \\
+  \ganttmilestone{Avance 2}{10} \\
+  \ganttbar{Triaje v2}{11}{12} \\
+  \ganttbar{Panel de control}{11}{13} \\
+  \ganttbar{Documento (secs.\,5--10)}{11}{14} \\
+  \ganttbar{Pruebas finales}{13}{14} \\
+  \ganttmilestone{Entrega final}{15}
+\end{ganttchart}
+\caption{Planificación Gantt del proyecto ResQ-Net.}
+\label{fig:gantt}
+\end{figure}
+
+% ╔══════════════════════════════════════════════════════════════════════════╗
+% ║  7. COMPONENTE ÉTICO                                                     ║
+% ╚══════════════════════════════════════════════════════════════════════════╝
+\section{Componente Ético}
+
+\subsection{El dilema del triaje algorítmico}
+
+ResQ-Net debe resolver un problema que ningún sistema técnico puede eludir:
+\textit{¿a quién enviar el último kit de medicamentos cuando hay más personas
+que recursos?} Esta pregunta tiene dimensiones étnicas, socioeconómicas y
+médicas que un algoritmo simplifica necesariamente.
+
+La tentación de diseñar un sistema que ``maximice vidas salvadas'' esconde
+supuestos filosóficos con consecuencias concretas: ¿se priorizan los menores
+de edad? ¿Se descarta a personas mayores de cierta edad? ¿Cómo se maneja la
+incertidumbre en el diagnóstico de campo?
+
+\textbf{Nuestra posición:} el algoritmo de triaje de ResQ-Net no toma
+decisiones autónomas finales. Produce \textbf{recomendaciones priorizadas con
+criterios explícitos y auditables} que siempre deben ser confirmadas por un
+coordinador humano. La última palabra es siempre humana.
+
+\subsection{Aplicación del Código de Ética IEEE/ACM}
+
+Aplicamos principalmente el \textbf{Principio 1 del ACM Code of Ethics}:
+\textit{``Un ingeniero de software actuará de manera consistente con el interés
+público''} \cite{acm2018}, concretado en las siguientes decisiones de diseño:
+
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Transparencia algorítmica:} cada recomendación muestra los
+        criterios usados (gravedad médica, distancia, stock disponible) para
+        que el coordinador pueda cuestionarla.
+  \item \textbf{Privacidad por defecto:} los datos de víctimas no contienen
+        nombres propios ni identificadores personales; solo coordenadas,
+        gravedad y tipo de necesidad.
+  \item \textbf{Equidad:} el algoritmo no incluye variables socioeconómicas,
+        étnicas ni de género. Solo criterios médicos y logísticos.
+  \item \textbf{Trazabilidad:} cada decisión de asignación queda registrada
+        con timestamp para auditoría post-crisis.
+\end{itemize}
+
+También aplicamos el \textbf{Principio 3} (\textit{Producto}): el MVP debe
+ser seguro incluso en condiciones extremas. Por eso priorizamos la resiliencia
+sobre la funcionalidad avanzada: es preferible un sistema que funcione sin
+internet pero que pierda algunas características, a uno que falle por completo
+cuando la conectividad no está disponible.
+
+\subsection{Limitaciones éticas reconocidas}
+
+\begin{itemize}[leftmargin=1.5em]
+  \item El sistema depende de la calidad de los datos ingresados en campo
+        (``garbage in, garbage out''). La fatiga y el estrés de las brigadas
+        pueden introducir errores.
+  \item La simulación del MVP no prueba el sistema bajo condiciones reales de
+        caos, latencia de red o falla de hardware.
+  \item El sesgo en los datos de entrenamiento (si se usa ML en versiones
+        futuras) podría reproducir desigualdades históricas en la respuesta
+        humanitaria.
+\end{itemize}
+
+% ╔══════════════════════════════════════════════════════════════════════════╗
+% ║  8. IMPACTO SOCIAL ESPERADO                                              ║
+% ╚══════════════════════════════════════════════════════════════════════════╝
+\section{Impacto Social Esperado}
+
+\subsection{Beneficiarios}
+
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Directos:} personas afectadas por desastres que reciben
+        atención más rápida y coordinada; brigadas de rescate que operan con
+        mejor información; coordinadores que toman decisiones con datos en
+        tiempo real.
+  \item \textbf{Indirectos:} ONGs y organismos estatales que analizan los
+        datos post-crisis para mejorar protocolos futuros; aseguradoras y
+        gobiernos que reducen costos de operaciones mal coordinadas.
+\end{itemize}
+
+\subsection{Indicadores de impacto}
+
+\begin{longtable}{p{5.5cm} p{3cm} p{4cm}}
+  \toprule
+  Indicador & Línea base & Meta (6 meses) \\
+  \midrule
+  \endfirsthead
+  \toprule
+  Indicador & Línea base & Meta (6 meses) \\
+  \midrule
+  \endhead
+  Tiempo promedio de primera respuesta coordinada & 4--6\,h & $<$\,1\,h \\
+  Porcentaje de duplicación de entregas & 30--40\,\% & $<$\,5\,\% \\
+  Cobertura de zonas sin asistencia & Sin métrica & $<$\,10\,\% sin visita \\
+  Decisiones de triaje auditadas & 0\,\% & 100\,\% \\
+  \bottomrule
+\end{longtable}
+
+\subsection{Escalabilidad}
+
+La arquitectura Mesh permite incorporar nodos nuevos de forma orgánica:
+basta con conectar un dispositivo a la red local del sector para que empiece
+a sincronizar datos. No hay un servidor central que pueda convertirse en
+cuello de botella. En una versión de producción, los nodos fog podrían ser
+mochilas con Raspberry Pi y antenas de largo alcance (LoRa o Wi-Fi 5\,GHz),
+desplegadas desde helicóptero en los primeros minutos del desastre.
+
+% ╔══════════════════════════════════════════════════════════════════════════╗
+% ║  9. CONCLUSIONES Y TRABAJO FUTURO                                        ║
+% ╚══════════════════════════════════════════════════════════════════════════╝
+\section{Conclusiones y Trabajo Futuro}
+
+\subsection{Lecciones aprendidas}
+
+Desarrollar ResQ-Net en tres semanas dejó lecciones que difícilmente habríamos
+aprendido en el aula. La más importante: la arquitectura importa más que las
+features. Dedicar la primera semana a diseñar la topología de nodos y el
+protocolo de sincronización fue la decisión que salvó el proyecto; cada
+funcionalidad que construimos después encajó sin fricciones estructurales.
+
+Otra lección fue la dificultad de diseñar algoritmos que tomen decisiones
+con consecuencias humanas reales. El debate interno sobre qué variables incluir
+en el modelo de triaje ---y cuáles excluir para evitar discriminación--- fue
+más útil que cualquier lectura sobre ética de IA.
+
+\subsection{Limitaciones del MVP}
+
+\begin{itemize}[leftmargin=1.5em]
+  \item La red Mesh está simulada en el navegador; no probamos latencias ni
+        pérdidas de paquetes reales.
+  \item El mapa usa datos estáticos; en producción necesitaría actualizarse
+        con imágenes satelitales post-desastre.
+  \item El motor de triaje es determinista; en escenarios reales, la
+        incertidumbre médica requeriría modelos probabilísticos.
+\end{itemize}
+
+\subsection{Trabajo futuro}
+
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{v2.0:} implementar la red Mesh real sobre dispositivos Android
+        con Wi-Fi Direct y Bluetooth LE.
+  \item \textbf{v2.1:} integrar imágenes de drones en tiempo real para
+        actualizar el mapa automáticamente.
+  \item \textbf{v3.0:} añadir un modelo de ML para predicción de demanda de
+        recursos basado en el tipo y magnitud del desastre.
+  \item \textbf{v3.1:} integración con sistemas de la UNGRD y la Cruz Roja
+        Colombiana para pruebas piloto en simulacros reales.
+\end{enumerate}
+
+% ╔══════════════════════════════════════════════════════════════════════════╗
+% ║  10. REFERENCIAS                                                         ║
+% ╚══════════════════════════════════════════════════════════════════════════╝
+\section*{Referencias}
+\addcontentsline{toc}{section}{Referencias}
+
+\begin{thebibliography}{99}
+
+\bibitem{ocha2023}
+United Nations Office for the Coordination of Humanitarian Affairs (OCHA).
+\textit{Global Humanitarian Overview 2023}.
+Ginebra: OCHA, 2023.
+\href{https://www.unocha.org/global-humanitarian-overview-2023}{unocha.org/global-humanitarian-overview-2023}
+
+\bibitem{ungrd2022}
+Unidad Nacional para la Gestión del Riesgo de Desastres (UNGRD).
+\textit{Informe anual de gestión del riesgo 2022}.
+Bogotá: UNGRD, 2022.
+\href{https://portal.gestiondelriesgo.gov.co}{portal.gestiondelriesgo.gov.co}
+
+\bibitem{who2022}
+World Health Organization (WHO).
+\textit{Emergency Response Framework}, 2.ª ed.
+Ginebra: WHO, 2022.
+\href{https://www.who.int/publications/i/item/9789240058460}{who.int/publications}
+
+\bibitem{schuller2016}
+M. Schuller y P. Morales (eds.).
+\textit{Tectonic Shifts: Haiti Since the Earthquake}.
+Sterling: Kumarian Press, 2012.
+
+\bibitem{plattner2010}
+H. Plattner.
+\textit{An Introduction to Design Thinking: Process Guide}.
+Stanford: Hasso Plattner Institute of Design at Stanford University, 2010.
+
+\bibitem{acm2018}
+ACM \& IEEE-CS Joint Task Force on Software Engineering Ethics.
+\textit{Software Engineering Code of Ethics and Professional Practice}, v5.2.
+Nueva York: ACM, 2018.
+\href{https://www.acm.org/code-of-ethics}{acm.org/code-of-ethics}
+
+\bibitem{tanenbaum2017}
+A. S. Tanenbaum y D. J. Wetherall.
+\textit{Computer Networks}, 5.ª ed.
+Upper Saddle River: Pearson, 2011.
+
+\bibitem{bonomi2012}
+F. Bonomi, R. Milito, J. Zhu y S. Addepalli.
+``Fog Computing and its Role in the Internet of Things''.
+En: \textit{Proc. of the First Edition of the MCC Workshop on Mobile Cloud Computing}, 2012, pp.\,13--16.
+
+\bibitem{lee2020}
+I. Lee y K. Lee.
+``The Internet of Things (IoT): Applications, investments, and challenges for enterprises''.
+\textit{Business Horizons}, vol.\,58, n.º\,4, pp.\,431--440, 2015.
+
+\bibitem{openstreetmap}
+OpenStreetMap contributors.
+\textit{OpenStreetMap} [en línea].
+Disponible en: \href{https://www.openstreetmap.org}{openstreetmap.org}
+[Acceso: marzo 2026].
+
+\end{thebibliography}
+
+\end{document}
